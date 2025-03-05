@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 class TaskViewModel: ObservableObject {
     @Published var tasks: [TaskItem] = [] {
@@ -14,11 +15,18 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    @Published var selectedDay: WeekDay = .monday
+    @Published var showStreaks: Bool {
+        didSet {
+            UserDefaults.standard.set(showStreaks, forKey: "showStreaks")
+        }
+    }
     
     private let tasksKey = "savedTasks"
     
     init() {
+        // Load streak visibility setting
+        self.showStreaks = UserDefaults.standard.bool(forKey: "showStreaks")
+        
         loadTasks()
     }
     
@@ -35,40 +43,92 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    var tasksForSelectedDay: [TaskItem] {
-        tasks.filter { $0.weekDays.contains(selectedDay) }
-    }
-    
     func tasksForDay(_ day: WeekDay) -> [TaskItem] {
-        tasks.filter { $0.weekDays.contains(day) }
+        let dayTasks = tasks.filter { $0.weekDays.contains(day) }
+        return dayTasks.sorted { task1, task2 in
+            // First sort by completion status
+            if task1.isCompleted(for: day) != task2.isCompleted(for: day) {
+                return !task1.isCompleted(for: day)
+            }
+            // Then sort by flag status
+            if task1.isFlagged(for: day) != task2.isFlagged(for: day) {
+                return task1.isFlagged(for: day)
+            }
+            // Finally sort by creation date
+            return task1.createdAt < task2.createdAt
+        }
     }
     
-    func addTask(title: String, isFlagged: Bool = false, weekDays: Set<WeekDay>) {
-        let task = TaskItem(title: title, isFlagged: isFlagged, weekDays: weekDays)
-        tasks.append(task)
+    func addTask(_ task: TaskItem) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            tasks.append(task)
+        }
     }
     
-    func deleteTask(at indexSet: IndexSet) {
-        tasks.remove(atOffsets: indexSet)
-    }
-    
-    func toggleTaskCompletion(taskItem: TaskItem, for day: WeekDay) {
-        if let index = tasks.firstIndex(where: { $0.id == taskItem.id }) {
-            if tasks[index].completedDays.contains(day) {
-                tasks[index].completedDays.remove(day)
-            } else {
-                tasks[index].completedDays.insert(day)
+    func deleteTask(taskItem: TaskItem, from day: WeekDay) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            if let index = tasks.firstIndex(where: { $0.id == taskItem.id }) {
+                // If the task is only for this day, delete it completely
+                if tasks[index].weekDays.count == 1 {
+                    tasks.remove(at: index)
+                } else {
+                    // Otherwise, just remove this day
+                    tasks[index].weekDays.remove(day)
+                    tasks[index].completedDays.remove(day)
+                    tasks[index].flaggedDays.remove(day)
+                }
             }
         }
     }
     
-    func toggleTaskFlag(taskItem: TaskItem) {
-        if let index = tasks.firstIndex(where: { $0.id == taskItem.id }) {
-            tasks[index].isFlagged.toggle()
+    func toggleTaskCompletion(taskItem: TaskItem, for day: WeekDay) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            if let index = tasks.firstIndex(where: { $0.id == taskItem.id }) {
+                if tasks[index].completedDays.contains(day) {
+                    tasks[index].completedDays.remove(day)
+                    // Decrease streak when uncompleting
+                    tasks[index].streak = max(0, tasks[index].streak - 1)
+                } else {
+                    tasks[index].completedDays.insert(day)
+                    // Increase streak when completing
+                    tasks[index].streak += 1
+                }
+            }
         }
     }
     
-    func setSelectedDay(_ day: WeekDay) {
-        selectedDay = day
+    func toggleTaskFlag(taskItem: TaskItem, for day: WeekDay) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            if let index = tasks.firstIndex(where: { $0.id == taskItem.id }) {
+                if tasks[index].flaggedDays.contains(day) {
+                    tasks[index].flaggedDays.remove(day)
+                } else {
+                    tasks[index].flaggedDays.insert(day)
+                }
+            }
+        }
+    }
+    
+    // Get total completed tasks for a specific day
+    func completedTasksCount(for day: WeekDay) -> Int {
+        tasks.filter { $0.isCompleted(for: day) }.count
+    }
+    
+    // Get total tasks for a specific day
+    func totalTasksCount(for day: WeekDay) -> Int {
+        tasks.filter { $0.weekDays.contains(day) }.count
+    }
+    
+    // Get completion rate for a specific day
+    func completionRate(for day: WeekDay) -> Double {
+        let total = totalTasksCount(for: day)
+        guard total > 0 else { return 0 }
+        return Double(completedTasksCount(for: day)) / Double(total)
+    }
+    
+    func removeAllTasks() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            tasks.removeAll()
+        }
     }
 }

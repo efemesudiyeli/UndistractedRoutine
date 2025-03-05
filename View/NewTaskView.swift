@@ -5,21 +5,21 @@ struct NewTaskView: View {
     @EnvironmentObject private var viewModel: TaskViewModel
     
     @State private var taskTitle = ""
-    @State private var isFlagged = false
+    @State private var isImportant = false
     @State private var selectedDays: Set<WeekDay> = []
     
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Görev başlığı", text: $taskTitle)
+                    TextField("Task title", text: $taskTitle)
                 }
                 
                 Section {
-                    Toggle("Önemli", isOn: $isFlagged)
+                    Toggle("Important", isOn: $isImportant)
                 }
                 
-                Section("Günler") {
+                Section("Days") {
                     ForEach(WeekDay.allCases, id: \.self) { day in
                         Toggle(day.rawValue, isOn: Binding(
                             get: { selectedDays.contains(day) },
@@ -34,18 +34,23 @@ struct NewTaskView: View {
                     }
                 }
             }
-            .navigationTitle("Yeni Görev")
+            .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("İptal") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Ekle") {
-                        viewModel.addTask(title: taskTitle, isFlagged: isFlagged, weekDays: selectedDays)
+                    Button("Add") {
+                        let task = TaskItem(
+                            title: taskTitle,
+                            weekDays: selectedDays,
+                            flaggedDays: isImportant ? selectedDays : []
+                        )
+                        viewModel.addTask(task)
                         dismiss()
                     }
                     .disabled(taskTitle.isEmpty || selectedDays.isEmpty)

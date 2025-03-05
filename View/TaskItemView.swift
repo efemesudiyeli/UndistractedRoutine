@@ -21,27 +21,42 @@ struct TaskItemView: View {
                 Text(task.title)
                     .foregroundStyle(Color.primary)
                 Spacer()
-                Image(systemName: "flag")
-                    .foregroundStyle(task.isFlagged ? .red : .gray)
+                HStack(spacing: 8) {
+                    if viewModel.showStreaks && task.streak > 0 {
+                        Text(task.streakEmoji)
+                            .font(.caption)
+                    }
+                    if task.isFlagged(for: day) {
+                        Image(systemName: "flag.fill")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
-                if let index = viewModel.tasks.firstIndex(where: { $0.id == task.id }) {
-                    viewModel.deleteTask(at: IndexSet([index]))
-                }
+                viewModel.deleteTask(taskItem: task, from: day)
             } label: {
-                Label("Sil", systemImage: "trash")
+                Label("Delete", systemImage: "trash")
             }
             
             if !task.isCompleted(for: day) {
                 Button {
                     viewModel.toggleTaskCompletion(taskItem: task, for: day)
                 } label: {
-                    Label("Tamamla", systemImage: "checkmark.circle")
+                    Label("Complete", systemImage: "checkmark.circle")
                 }
                 .tint(.green)
             }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                viewModel.toggleTaskFlag(taskItem: task, for: day)
+            } label: {
+                Label(task.isFlagged(for: day) ? "Remove Flag" : "Flag", 
+                      systemImage: task.isFlagged(for: day) ? "flag.slash" : "flag")
+            }
+            .tint(.red)
         }
     }
 }
