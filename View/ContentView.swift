@@ -18,20 +18,11 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("Undistracted Routine")
-                    .font(.title)
-                    .fontWeight(.black)
-                Spacer()
-                Button {
-                    showingSettings = true
-                } label: {
-                    Image(systemName: "gear")
-                        .font(.title3)
-                }
-            }
-            .padding(.top)
-            .padding(.horizontal)
+            Text("Undistracted Routine")
+                .font(.title)
+                .fontWeight(.black)
+                .padding(.top)
+                .padding(.horizontal)
             
             if daysWithTasks.isEmpty {
                 VStack(spacing: 20) {
@@ -84,14 +75,25 @@ struct ContentView: View {
                         }
                     }
                 }
-                
+            }
+            
+            HStack {
                 Button {
                     showingNewTask = true
                 } label: {
                     Label("New Task", systemImage: "plus.circle.fill")
                 }
-                .padding(.bottom)
+                
+                Spacer()
+                
+                Button {
+                    showingSettings = true
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                }
             }
+            .padding(.horizontal)
+            .padding(.bottom)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showingNewTask) {
