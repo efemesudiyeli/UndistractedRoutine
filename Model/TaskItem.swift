@@ -60,9 +60,10 @@ struct TaskItem: Identifiable, Codable {
     
     var streakEmoji: String {
         switch streak {
-        case 0: return "🌱"
-        case 1...2: return "🌿"
-        default: return "🌳"
+        case 1...2: return "🌱"
+        case 3...6: return "🌿" 
+        case 7: return "🌳"
+        default: return "🌱"
         }
     }
     
