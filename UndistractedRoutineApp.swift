@@ -9,12 +9,13 @@ import SwiftUI
 
 @main
 struct UndistractedRoutineApp: App {
-    @StateObject private var taskViewModel = TaskViewModel()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var viewModel = TaskViewModel()
     
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(taskViewModel)
+                .environmentObject(viewModel)
         }
     }
 }

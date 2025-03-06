@@ -83,7 +83,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                gi
+                
                 
                 Section {
                     ForEach(viewModel.defaultNotificationTimes.indices, id: \.self) { index in
