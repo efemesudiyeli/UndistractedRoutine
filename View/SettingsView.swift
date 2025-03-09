@@ -69,9 +69,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: TaskViewModel
     @State private var showingDeleteConfirmation = false
-    @State private var showingAddTime = false
-    @State private var newHour = 9
-    @State private var newMinute = 0
     
     var body: some View {
         NavigationStack {
@@ -80,25 +77,6 @@ struct SettingsView: View {
                     Toggle("Show Streaks", isOn: $viewModel.showStreaks)
                 } footer: {
                     Text("Streaks show your consecutive task completions with plant emojis (🌱 → 🌿 → 🌳). Turn this off if you find it distracting.")
-                        .foregroundStyle(.secondary)
-                }
-                
-                
-                
-                Section {
-                    ForEach(viewModel.defaultNotificationTimes.indices, id: \.self) { index in
-                        NotificationTimeRow(time: viewModel.defaultNotificationTimes[index]) {
-                            viewModel.removeNotificationTime(at: index)
-                        }
-                    }
-                    
-                    Button {
-                        showingAddTime = true
-                    } label: {
-                        Label("Add Time", systemImage: "plus.circle.fill")
-                    }
-                } footer: {
-                    Text("These times will be used for all tasks. You can add up to 5 notification times per day.")
                         .foregroundStyle(.secondary)
                 }
                 
@@ -129,17 +107,6 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("Are you sure you want to remove all tasks? This action cannot be undone.")
-            }
-            .sheet(isPresented: $showingAddTime) {
-                AddTimeSheet(
-                    newHour: $newHour,
-                    newMinute: $newMinute,
-                    onAdd: {
-                        let minutes = newHour * 60 + newMinute
-                        viewModel.addNotificationTime(minutes)
-                    },
-                    isDisabled: viewModel.defaultNotificationTimes.count >= 5
-                )
             }
         }
     }

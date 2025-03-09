@@ -67,6 +67,7 @@ struct ContentView: View {
                             HStack {
                                 Text(day.rawValue)
                                     .font(.headline)
+                                    .foregroundStyle(isCurrentDay(day) ? Color.blue : Color.primary)
                                 Spacer()
                                 Text("\(viewModel.tasksForDay(day).count) tasks")
                                     .font(.caption)
@@ -102,6 +103,12 @@ struct ContentView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
+    }
+    
+    private func isCurrentDay(_ day: WeekDay) -> Bool {
+        let calendar = Calendar.current
+        let currentWeekday = calendar.component(.weekday, from: Date())
+        return day.weekdayNumber == currentWeekday
     }
 }
 

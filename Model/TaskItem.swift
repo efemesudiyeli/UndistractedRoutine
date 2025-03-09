@@ -55,7 +55,7 @@ struct TaskItem: Identifiable, Codable {
         self.flaggedDays = flaggedDays
         self.streak = streak
         self.notificationEnabled = notificationEnabled
-        self.notificationTimes = notificationTimes
+        self.notificationTimes = notificationTimes.sorted() // Ensure times are sorted
     }
     
     var streakEmoji: String {

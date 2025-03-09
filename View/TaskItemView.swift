@@ -18,8 +18,15 @@ struct TaskItemView: View {
         } label: {
             HStack {
                 Image(systemName: task.isCompleted(for: day) ? "checkmark.circle.fill" : "circle")
-                Text(task.title)
-                    .foregroundStyle(Color.primary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(task.title)
+                        .foregroundStyle(Color.primary)
+                    if !task.notificationTimes.isEmpty {
+                        Text(notificationTimesString)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 Spacer()
                 HStack(spacing: 8) {
                     if viewModel.showStreaks && task.streak > 0 {
@@ -59,11 +66,19 @@ struct TaskItemView: View {
             .tint(.red)
         }
     }
+    
+    private var notificationTimesString: String {
+        task.notificationTimes.map { time in
+            let hour = time / 60
+            let minute = time % 60
+            return String(format: "%02d:%02d", hour, minute)
+        }.joined(separator: ", ")
+    }
 }
 
 #Preview {
     List {
-        TaskItemView(task: TaskItem(title: "Laundry"), day: .monday)
+        TaskItemView(task: TaskItem(title: "Laundry", notificationTimes: [540, 780]), day: .monday)
             .preferredColorScheme(.dark)
     }
 }
