@@ -11,6 +11,7 @@ struct TaskItemView: View {
     @EnvironmentObject private var viewModel: TaskViewModel
     let task: TaskItem
     let day: WeekDay
+    @State private var showingEditSheet = false
     
     var body: some View {
         Button {
@@ -20,6 +21,7 @@ struct TaskItemView: View {
                 Image(systemName: task.isCompleted(for: day) ? "checkmark.circle.fill" : "circle")
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
+                        .font(task.isFlagged(for: day) ? .headline : .body)
                         .foregroundStyle(Color.primary)
                     if !task.notificationTimes.isEmpty {
                         Text(notificationTimesString)
@@ -29,13 +31,14 @@ struct TaskItemView: View {
                 }
                 Spacer()
                 HStack(spacing: 8) {
-                    if viewModel.showStreaks && task.streak > 0 {
-                        Text(task.streakEmoji)
-                            .font(.caption)
-                    }
                     if task.isFlagged(for: day) {
                         Image(systemName: "flag.fill")
                             .foregroundStyle(.red)
+                            .font(.caption)
+                    }
+                    if viewModel.showStreaks && task.streak > 0 {
+                        Text(task.streakEmoji)
+                            .font(.caption)
                     }
                 }
             }
@@ -55,6 +58,13 @@ struct TaskItemView: View {
                 }
                 .tint(.green)
             }
+            
+            Button {
+                showingEditSheet = true
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(.blue)
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -64,6 +74,9 @@ struct TaskItemView: View {
                       systemImage: task.isFlagged(for: day) ? "flag.slash" : "flag")
             }
             .tint(.red)
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            EditTaskView(task: task)
         }
     }
     

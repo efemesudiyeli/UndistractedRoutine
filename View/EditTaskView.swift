@@ -1,16 +1,25 @@
 import SwiftUI
 
-struct NewTaskView: View {
+struct EditTaskView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: TaskViewModel
     
-    @State private var taskTitle = ""
-    @State private var isImportant = false
-    @State private var selectedDays: Set<WeekDay> = []
-    @State private var notificationTimes: [Int] = []
+    let task: TaskItem
+    @State private var taskTitle: String
+    @State private var isImportant: Bool
+    @State private var selectedDays: Set<WeekDay>
+    @State private var notificationTimes: [Int]
     @State private var showingAddTime = false
     @State private var newHour = 9
     @State private var newMinute = 0
+    
+    init(task: TaskItem) {
+        self.task = task
+        _taskTitle = State(initialValue: task.title)
+        _isImportant = State(initialValue: !task.flaggedDays.isEmpty)
+        _selectedDays = State(initialValue: task.weekDays)
+        _notificationTimes = State(initialValue: task.notificationTimes)
+    }
     
     var body: some View {
         NavigationStack {
@@ -21,9 +30,6 @@ struct NewTaskView: View {
                 
                 Section {
                     Toggle("Important", isOn: $isImportant)
-                } footer: {
-                    Text("Important tasks will be marked with a red flag and will appear at the top of the list. They will also have priority notifications.")
-                        .foregroundStyle(.secondary)
                 }
                 
                 Section("Days") {
@@ -61,7 +67,7 @@ struct NewTaskView: View {
                     }
                 }
             }
-            .navigationTitle("New Task")
+            .navigationTitle("Edit Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -71,14 +77,19 @@ struct NewTaskView: View {
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        let task = TaskItem(
+                    Button("Save") {
+                        let updatedTask = TaskItem(
+                            id: task.id,
                             title: taskTitle,
+                            createdAt: task.createdAt,
                             weekDays: selectedDays,
+                            completedDays: task.completedDays,
                             flaggedDays: isImportant ? selectedDays : [],
+                            streak: task.streak,
+                            notificationEnabled: task.notificationEnabled,
                             notificationTimes: notificationTimes
                         )
-                        viewModel.addTask(task)
+                        viewModel.updateTask(updatedTask)
                         dismiss()
                     }
                     .disabled(taskTitle.isEmpty || selectedDays.isEmpty)
@@ -106,4 +117,9 @@ struct NewTaskView: View {
         let minute = minutes % 60
         return String(format: "%02d:%02d", hour, minute)
     }
+}
+
+#Preview {
+    EditTaskView(task: TaskItem(title: "Test Task"))
+        .environmentObject(TaskViewModel())
 } 

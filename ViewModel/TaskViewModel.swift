@@ -25,12 +25,46 @@ class TaskViewModel: ObservableObject {
     }
     
     private let tasksKey = "tasks"
+    private let lastResetKey = "lastResetDate"
     
     init() {
         self.showStreaks = UserDefaults.standard.bool(forKey: "showStreaks")
         TaskViewModel.shared = self
         loadTasks()
         requestNotificationPermission()
+        checkAndResetWeekly()
+    }
+    
+    private func checkAndResetWeekly() {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Son sıfırlama tarihini kontrol et
+        if let lastReset = UserDefaults.standard.object(forKey: lastResetKey) as? Date {
+            // Eğer son sıfırlamadan bu yana yeni bir hafta başladıysa
+            if !calendar.isDate(lastReset, equalTo: now, toGranularity: .weekOfYear) {
+                resetWeeklyTasks()
+            }
+        } else {
+            // İlk kez çalıştırılıyorsa
+            resetWeeklyTasks()
+        }
+    }
+    
+    private func resetWeeklyTasks() {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        // Tüm görevlerin tamamlanma durumlarını sıfırla
+        for index in tasks.indices {
+            // Streak'i koru, sadece completedDays'i temizle
+            tasks[index].completedDays.removeAll()
+        }
+        
+        // Son sıfırlama tarihini güncelle
+        UserDefaults.standard.set(now, forKey: lastResetKey)
+        
+        print("Weekly tasks reset completed at \(now)")
     }
     
     private func requestNotificationPermission() {
@@ -51,87 +85,59 @@ class TaskViewModel: ObservableObject {
         }
     }
     
-    func scheduleNotification(for task: TaskItem, on weekday: WeekDay) {
-        let center = UNUserNotificationCenter.current()
+    func scheduleNotification(for task: TaskItem, on day: WeekDay) {
+        print("📅 Scheduling notifications for task: \(task.title) on \(day.rawValue)")
+        print("⏰ Notification times: \(task.notificationTimes)")
         
-        print("Bildirimler planlanıyor: \(task.title) için \(weekday.rawValue). gün")
-        print("Bildirim saatleri: \(task.notificationTimes)")
-        
-        guard task.notificationEnabled else {
-            print("Bildirimler kapalı: \(task.title)")
-            return
+        // Clear old notifications for this task
+        let identifiersToRemove = task.notificationTimes.map { time in
+            "\(task.id)_\(time)"
         }
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
         
-        // Önce bu görev için tüm eski bildirimleri temizle
-        let identifiersToRemove = task.weekDays.flatMap { day in
-            task.notificationTimes.map { time in
-                "\(task.id)-\(day.rawValue)-\(time)"
-            }
-        }
-        center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
-        print("Eski bildirimler temizlendi: \(identifiersToRemove)")
-        
-        // Yeni bildirimleri planla
-        for timeInMinutes in task.notificationTimes {
+        // Schedule new notifications
+        for time in task.notificationTimes {
             let content = UNMutableNotificationContent()
-            content.title = "Görev Hatırlatması"
-            content.body = "Tamamlanmamış görev: \(task.title)"
-            content.sound = .default
-            content.badge = 1
+            content.title = task.title
+            content.body = task.isFlagged(for: day) ? "⚠️ Important task: Time to complete!" : "Time to complete your task!"
             
-            var dateComponents = DateComponents()
-            dateComponents.weekday = weekday.weekdayNumber
-            dateComponents.hour = timeInMinutes / 60
-            dateComponents.minute = timeInMinutes % 60
-            
-            print("Bildirim planlanıyor: \(task.title) - Gün \(weekday.weekdayNumber), Saat \(timeInMinutes/60):\(timeInMinutes%60)")
-            
-            // Bildirimin tekrarlanması için gerekli ayarlar
-            let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
-            
-            let notificationIdentifier = "\(task.id)-\(weekday.rawValue)-\(timeInMinutes)"
-            
-            let request = UNNotificationRequest(
-                identifier: notificationIdentifier,
-                content: content,
-                trigger: trigger
-            )
-            
-            center.add(request) { error in
-                if let error = error {
-                    print("Bildirim planlama hatası: \(error)")
-                } else {
-                    print("Bildirim başarıyla planlandı: \(notificationIdentifier)")
-                    
-                    // Bildirimin gerçekten planlandığını kontrol et
-                    center.getPendingNotificationRequests { requests in
-                        let matchingRequests = requests.filter { $0.identifier == notificationIdentifier }
-                        if matchingRequests.isEmpty {
-                            print("UYARI: Bildirim planlanamadı: \(notificationIdentifier)")
-                        } else {
-                            print("Bildirim başarıyla planlandı ve doğrulandı: \(notificationIdentifier)")
-                            if let trigger = matchingRequests[0].trigger as? UNCalendarNotificationTrigger {
-                                print("Bildirim zamanı: \(trigger.dateComponents)")
-                            }
-                        }
-                    }
-                }
+            // Set notification sound and priority based on importance
+            if task.isFlagged(for: day) {
+                content.sound = .default
+                content.interruptionLevel = .timeSensitive
+                content.badge = 1
+                content.categoryIdentifier = "IMPORTANT_TASK"
+                content.threadIdentifier = "important_tasks"
+                content.relevanceScore = 1.0
+                content.targetContentIdentifier = "important_task"
+                
+                // Set notification subtitle for important tasks
+                content.subtitle = "High Priority"
+                
+                // Set user info for important tasks
+                content.userInfo = ["isImportant": true]
+            } else {
+                content.sound = .default
+                content.interruptionLevel = .active
+                content.categoryIdentifier = "REGULAR_TASK"
+                content.threadIdentifier = "regular_tasks"
+                content.relevanceScore = 0.5
             }
-        }
-        
-        // Tüm planlanan bildirimleri kontrol et
-        center.getPendingNotificationRequests { requests in
-            let taskNotifications = requests.filter { $0.identifier.contains(task.id.uuidString) }
-            print("\(task.title) için planlanan bildirim sayısı: \(taskNotifications.count)")
-            for request in taskNotifications {
-                if let trigger = request.trigger as? UNCalendarNotificationTrigger {
-                    print("Planlanan bildirim: \(request.identifier)")
-                    print("Zaman: \(trigger.dateComponents)")
-                    
-                    // Bildirimin ne zaman tetikleneceğini hesapla
-                    if let nextTriggerDate = trigger.nextTriggerDate() {
-                        print("Bir sonraki bildirim zamanı: \(nextTriggerDate)")
-                    }
+            
+            let calendar = Calendar.current
+            var components = DateComponents()
+            components.weekday = day.weekdayNumber
+            components.hour = time / 60
+            components.minute = time % 60
+            
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            let request = UNNotificationRequest(identifier: "\(task.id)_\(time)", content: content, trigger: trigger)
+            
+            UNUserNotificationCenter.current().add(request) { error in
+                if let error = error {
+                    print("❌ Error scheduling notification: \(error.localizedDescription)")
+                } else {
+                    print("✅ Notification scheduled for \(task.title) at \(components.hour!):\(components.minute!) on \(day.rawValue)")
                 }
             }
         }
@@ -224,24 +230,7 @@ class TaskViewModel: ObservableObject {
     
     func tasksForDay(_ day: WeekDay) -> [TaskItem] {
         let dayTasks = tasks.filter { $0.weekDays.contains(day) }
-        return dayTasks.sorted { task1, task2 in
-            // First sort by completion status
-            if task1.isCompleted(for: day) != task2.isCompleted(for: day) {
-                return !task1.isCompleted(for: day)
-            }
-            // Then by flag status
-            if task1.isFlagged(for: day) != task2.isFlagged(for: day) {
-                return task1.isFlagged(for: day)
-            }
-            // Then by earliest notification time
-            let task1Time = task1.notificationTimes.first ?? Int.max
-            let task2Time = task2.notificationTimes.first ?? Int.max
-            if task1Time != task2Time {
-                return task1Time < task2Time
-            }
-            // Finally by creation date
-            return task1.createdAt < task2.createdAt
-        }
+        return sortTasks(dayTasks, for: day)
     }
     
     func addTask(_ task: TaskItem) {
@@ -325,6 +314,41 @@ class TaskViewModel: ObservableObject {
     func removeAllTasks() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             tasks.removeAll()
+        }
+    }
+    
+    private func sortTasks(_ tasks: [TaskItem], for day: WeekDay) -> [TaskItem] {
+        return tasks.sorted { task1, task2 in
+            // First sort by importance
+            if task1.isFlagged(for: day) != task2.isFlagged(for: day) {
+                return task1.isFlagged(for: day)
+            }
+            
+            // Then by earliest notification time
+            let time1 = task1.notificationTimes.min() ?? Int.max
+            let time2 = task2.notificationTimes.min() ?? Int.max
+            return time1 < time2
+        }
+    }
+    
+    func updateTask(_ updatedTask: TaskItem) {
+        if let index = tasks.firstIndex(where: { $0.id == updatedTask.id }) {
+            // Eski bildirimleri temizle
+            let center = UNUserNotificationCenter.current()
+            let identifiersToRemove = tasks[index].weekDays.flatMap { day in
+                tasks[index].notificationTimes.map { time in
+                    "\(tasks[index].id)-\(day.rawValue)-\(time)"
+                }
+            }
+            center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
+            
+            // Görevi güncelle
+            tasks[index] = updatedTask
+            
+            // Yeni bildirimleri planla
+            for weekday in updatedTask.weekDays {
+                scheduleNotification(for: updatedTask, on: weekday)
+            }
         }
     }
 }

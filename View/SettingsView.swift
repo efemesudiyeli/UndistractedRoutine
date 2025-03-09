@@ -28,33 +28,48 @@ struct AddTimeSheet: View {
     let onAdd: () -> Void
     let isDisabled: Bool
     
+    private let hours = Array(0...23)
+    private let minutes = Array(0...59)
+    
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Picker("Hour", selection: $newHour) {
-                        ForEach(0..<24) { hour in
-                            Text("\(hour)").tag(hour)
+            VStack(spacing: 20) {
+                // Saat ve dakika seçici
+                HStack(spacing: 0) {
+                    Picker("Saat", selection: $newHour) {
+                        ForEach(hours, id: \.self) { hour in
+                            Text(String(format: "%02d", hour))
+                                .tag(hour)
                         }
                     }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
                     
-                    Picker("Minute", selection: $newMinute) {
-                        ForEach(0..<60) { minute in
-                            Text("\(minute)").tag(minute)
+                    Text(":")
+                        .font(.title)
+                        .padding(.horizontal, 5)
+                    
+                    Picker("Dakika", selection: $newMinute) {
+                        ForEach(minutes, id: \.self) { minute in
+                            Text(String(format: "%02d", minute))
+                                .tag(minute)
                         }
                     }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
                 }
+                .frame(height: 200)
             }
-            .navigationTitle("Add Notification Time")
+            .navigationTitle("Bildirim Saati Ekle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("İptal") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button("Ekle") {
                         onAdd()
                         dismiss()
                     }

@@ -13,7 +13,12 @@ struct ContentView: View {
     @State private var showingSettings = false
     
     var daysWithTasks: [WeekDay] {
-        WeekDay.allCases.filter { !viewModel.tasksForDay($0).isEmpty }
+        let days = WeekDay.allCases.filter { !viewModel.tasksForDay($0).isEmpty }
+        return days.sorted { day1, day2 in
+            if isCurrentDay(day1) { return true }
+            if isCurrentDay(day2) { return false }
+            return day1.weekdayNumber < day2.weekdayNumber
+        }
     }
     
     var body: some View {
@@ -66,7 +71,8 @@ struct ContentView: View {
                         } header: {
                             HStack {
                                 Text(day.rawValue)
-                                    .font(.headline)
+                                    .font(isCurrentDay(day) ? .title3 : .headline)
+                                    .fontWeight(isCurrentDay(day) ? .bold : .regular)
                                     .foregroundStyle(isCurrentDay(day) ? Color.blue : Color.primary)
                                 Spacer()
                                 Text("\(viewModel.tasksForDay(day).count) tasks")
@@ -94,7 +100,10 @@ struct ContentView: View {
                 }
             }
             .padding(.horizontal)
-            .padding(.bottom)
+            .padding(.vertical, 12)
+            .padding(.bottom, 8)
+            .background(Color(.systemBackground))
+            .shadow(color: .black.opacity(0.1), radius: 5, y: -2)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showingNewTask) {
