@@ -84,6 +84,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var viewModel: TaskViewModel
     @State private var showingDeleteConfirmation = false
+    @State private var showPetsView = false
+    @StateObject private var petViewModel = PetViewModel()
     
     var body: some View {
         NavigationStack {
@@ -105,6 +107,62 @@ struct SettingsView: View {
                     Text("This will permanently delete all your tasks. This action cannot be undone.")
                         .foregroundStyle(.secondary)
                 }
+                
+                Section {
+                    Button {
+                        showPetsView = true
+                    } label: {
+                        Label("Petlerim", systemImage: "pawprint.fill")
+                    }
+                } header: {
+                    Text("Pet Sistemi")
+                } footer: {
+                    Text("Haftanın %80'ini tamamlayarak yeni bir pet kazanabilirsin!")
+                }
+                
+                #if DEBUG
+                Section {
+                    Button {
+                        petViewModel.addTestPet()
+                    } label: {
+                        Label("Rastgele Pet Ekle", systemImage: "plus.circle")
+                    }
+                    
+                    Button {
+                        petViewModel.addAllPetTypes()
+                    } label: {
+                        Label("Tüm Pet Tiplerini Ekle", systemImage: "square.stack.3d.up")
+                    }
+                    
+                    Button {
+                        petViewModel.levelUpAllPets()
+                    } label: {
+                        Label("Tüm Petleri Seviye Atlat", systemImage: "arrow.up.circle")
+                    }
+                    
+                    Button {
+                        petViewModel.updateAllPetsHappiness(10)
+                    } label: {
+                        Label("Mutluluğu Artır (+10)", systemImage: "face.smiling")
+                    }
+                    
+                    Button {
+                        petViewModel.updateAllPetsHappiness(-10)
+                    } label: {
+                        Label("Mutluluğu Azalt (-10)", systemImage: "face.dashed")
+                    }
+                    
+                    Button(role: .destructive) {
+                        petViewModel.removeAllPets()
+                    } label: {
+                        Label("Tüm Petleri Sil", systemImage: "trash")
+                    }
+                } header: {
+                    Text("Test Menüsü")
+                } footer: {
+                    Text("Bu bölüm sadece geliştirme aşamasında görünür.")
+                }
+                #endif
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -114,6 +172,9 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+            }
+            .sheet(isPresented: $showPetsView) {
+                PetsView()
             }
             .alert("Remove All Tasks?", isPresented: $showingDeleteConfirmation) {
                 Button("Cancel", role: .cancel) { }

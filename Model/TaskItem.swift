@@ -1,24 +1,24 @@
 import Foundation
 import SwiftUI
 
-enum WeekDay: String, Codable, CaseIterable {
+enum WeekDay: String, Codable, CaseIterable, Hashable {
+    case sunday = "Sunday"
     case monday = "Monday"
     case tuesday = "Tuesday"
     case wednesday = "Wednesday"
     case thursday = "Thursday"
     case friday = "Friday"
     case saturday = "Saturday"
-    case sunday = "Sunday"
     
-    var shortName: String {
+    var displayName: String {
         switch self {
-        case .monday: return "Mon"
-        case .tuesday: return "Tue"
-        case .wednesday: return "Wed"
-        case .thursday: return "Thu"
-        case .friday: return "Fri"
-        case .saturday: return "Sat"
-        case .sunday: return "Sun"
+        case .sunday: return "Pazar"
+        case .monday: return "Pazartesi"
+        case .tuesday: return "Salı"
+        case .wednesday: return "Çarşamba"
+        case .thursday: return "Perşembe"
+        case .friday: return "Cuma"
+        case .saturday: return "Cumartesi"
         }
     }
     
@@ -35,7 +35,7 @@ enum WeekDay: String, Codable, CaseIterable {
     }
 }
 
-struct TaskItem: Identifiable, Codable {
+struct TaskItem: Identifiable, Codable, Equatable {
     let id: UUID
     var title: String
     var createdAt: Date
@@ -58,12 +58,47 @@ struct TaskItem: Identifiable, Codable {
         self.notificationTimes = notificationTimes.sorted() // Ensure times are sorted
     }
     
+    static func == (lhs: TaskItem, rhs: TaskItem) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.title == rhs.title &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.weekDays == rhs.weekDays &&
+        lhs.completedDays == rhs.completedDays &&
+        lhs.flaggedDays == rhs.flaggedDays &&
+        lhs.streak == rhs.streak &&
+        lhs.notificationEnabled == rhs.notificationEnabled &&
+        lhs.notificationTimes == rhs.notificationTimes
+    }
+    
     var streakEmoji: String {
         switch streak {
-        case 1...2: return "🌱"
-        case 3...6: return "🌿" 
-        case 7: return "🌳"
-        default: return "🌱"
+        case 0: return ""
+        case 1...2: return "🔥 1"
+        case 3...4: return "🔥 \(streak)"
+        case 5...6: return "🔥🔥 \(streak)"
+        case 7...13: return "🔥🔥 \(streak) 🎯"
+        case 14...20: return "🔥🔥🔥 \(streak) 🎯"
+        case 21...29: return "🔥🔥🔥 \(streak) 🎯 💪"
+        case 30...59: return "🏆 \(streak) 🔥"
+        case 60...89: return "👑 \(streak) 🔥🔥"
+        case 90...119: return "⭐️ \(streak) 🔥🔥🔥"
+        default: return "🌟 \(streak) 🔥🔥🔥 👑"
+        }
+    }
+    
+    var streakDescription: String {
+        switch streak {
+        case 0: return "Henüz streak yok"
+        case 1...2: return "Harika başlangıç!"
+        case 3...4: return "İyi gidiyorsun!"
+        case 5...6: return "Muhteşem ilerleme!"
+        case 7...13: return "Bir haftayı devirdin!"
+        case 14...20: return "İki haftayı aştın!"
+        case 21...29: return "Üç haftayı geçtin!"
+        case 30...59: return "Bir ay oldu!"
+        case 60...89: return "İki ay! İnanılmaz!"
+        case 90...119: return "Üç ay! Efsane!"
+        default: return "Artık bir efsanesin!"
         }
     }
     

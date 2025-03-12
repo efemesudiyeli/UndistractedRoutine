@@ -89,9 +89,9 @@ class TaskViewModel: ObservableObject {
         print("📅 Scheduling notifications for task: \(task.title) on \(day.rawValue)")
         print("⏰ Notification times: \(task.notificationTimes)")
         
-        // Clear old notifications for this task
+        // Clear old notifications for this task and day
         let identifiersToRemove = task.notificationTimes.map { time in
-            "\(task.id)_\(time)"
+            "\(task.id)-\(day.rawValue)-\(time)"
         }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
         
@@ -131,7 +131,8 @@ class TaskViewModel: ObservableObject {
             components.minute = time % 60
             
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-            let request = UNNotificationRequest(identifier: "\(task.id)_\(time)", content: content, trigger: trigger)
+            let identifier = "\(task.id)-\(day.rawValue)-\(time)"
+            let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
             
             UNUserNotificationCenter.current().add(request) { error in
                 if let error = error {
@@ -163,13 +164,18 @@ class TaskViewModel: ObservableObject {
         print("\n=== Tüm bildirimler yeniden planlanıyor ===")
         let center = UNUserNotificationCenter.current()
         
+        // Önce tüm bildirimleri temizle
         center.removeAllPendingNotificationRequests()
         print("Tüm eski bildirimler temizlendi")
         
+        // Her görev için bildirimleri yeniden planla
         for task in tasks {
             print("\nGörev bildirimleri planlanıyor: \(task.title)")
+            // Her gün için ayrı ayrı planla
             for weekday in task.weekDays {
-                scheduleNotification(for: task, on: weekday)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1 * Double(weekday.weekdayNumber)) {
+                    self.scheduleNotification(for: task, on: weekday)
+                }
             }
         }
     }
@@ -178,6 +184,7 @@ class TaskViewModel: ObservableObject {
         print("Görev bildirimleri güncelleniyor: \(task.title)")
         let center = UNUserNotificationCenter.current()
         
+        // Eski bildirimleri temizle
         let identifiersToRemove = task.weekDays.flatMap { weekday in
             task.notificationTimes.map { time in
                 "\(task.id)-\(weekday.rawValue)-\(time)"
@@ -186,8 +193,11 @@ class TaskViewModel: ObservableObject {
         center.removePendingNotificationRequests(withIdentifiers: identifiersToRemove)
         print("Eski bildirimler temizlendi: \(identifiersToRemove)")
         
-        for weekday in task.weekDays {
-            scheduleNotification(for: task, on: weekday)
+        // Her gün için ayrı ayrı yeni bildirimleri planla
+        for (index, weekday) in task.weekDays.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1 * Double(index)) {
+                self.scheduleNotification(for: task, on: weekday)
+            }
         }
     }
     

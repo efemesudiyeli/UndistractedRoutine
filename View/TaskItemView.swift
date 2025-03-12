@@ -12,6 +12,7 @@ struct TaskItemView: View {
     let task: TaskItem
     let day: WeekDay
     @State private var showingEditSheet = false
+    @State private var showingStreakInfo = false
     
     var body: some View {
         Button {
@@ -37,8 +38,12 @@ struct TaskItemView: View {
                             .font(.caption)
                     }
                     if viewModel.showStreaks && task.streak > 0 {
-                        Text(task.streakEmoji)
-                            .font(.caption)
+                        Button {
+                            showingStreakInfo = true
+                        } label: {
+                            Text(task.streakEmoji)
+                                .font(.caption)
+                        }
                     }
                 }
             }
@@ -77,6 +82,11 @@ struct TaskItemView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             EditTaskView(task: task)
+        }
+        .alert("Streak Bilgisi", isPresented: $showingStreakInfo) {
+            Button("Tamam", role: .cancel) {}
+        } message: {
+            Text(task.streakDescription)
         }
     }
     
